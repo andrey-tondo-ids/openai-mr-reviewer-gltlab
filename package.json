@@ -2,7 +2,6 @@
   "name": "openai-pr-reviewer",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "description": "OpenAI-based PR Reviewer and Summarizer.",
   "main": "lib/main.js",
   "scripts": {
@@ -15,7 +14,7 @@
     "test": "jest",
     "all": "npm run build && npm run format && npm run lint && npm run package && npm test",
     "package-gitlab": "rm -rf ./dist && mkdir dist && cp -v node_modules/@dqbd/tiktoken/tiktoken_bg.wasm dist/tiktoken_bg.wasm && ncc build ./src/gitlab-main.ts -s --no-source-map-register -o dist && mv dist/index.js dist/index.cjs && tar -czvf ./dist/dist.tar.gz dist/*",
-    "release-esm": "rm -rf ./dist && mkdir dist && cp -v node_modules/@dqbd/tiktoken/tiktoken_bg.wasm dist/tiktoken_bg.wasm && npx ncc build ./src/gitlab-main.ts -s --no-source-map-register -o dist && mv dist/index.js dist/index.mjs && tar -czvf dist/dist.tar.gz -C dist index.mjs index.js.map tiktoken_bg.wasm"
+    "release-cjs": "rm -rf ./dist && mkdir dist && cp -v node_modules/@dqbd/tiktoken/tiktoken_bg.wasm dist/tiktoken_bg.wasm && npx ncc build ./src/gitlab-main.ts -s --no-source-map-register -o dist && mv dist/index.js dist/index.cjs && tar -czvf dist/dist.tar.gz -C dist index.cjs index.js.map tiktoken_bg.wasm"
   },
   "repository": {
     "type": "git",
