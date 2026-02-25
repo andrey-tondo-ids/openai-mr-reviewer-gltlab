@@ -4,13 +4,13 @@ import {
   getMultilineInput,
   setFailed,
   warning
-} from './gitlab-core'
-import {setMRBody} from './gitlab-adapter'
-import {Bot} from './bot'
-import {OpenAIOptions, Options} from './options'
-import {Prompts} from './prompts'
-import {codeReview} from './review'
-// import {handleReviewComment} from './review-comment'
+} from './gitlab-core.js'
+import {setMRBody} from './gitlab-adapter.js'
+import {Bot} from './bot.js'
+import {OpenAIOptions, Options} from './options.js'
+import {Prompts} from './prompts.js'
+import {codeReview} from './review.js'
+// import {handleReviewComment} from './review-comment.js'
 
 async function run(): Promise<void> {
   const options: Options = new Options(

@@ -1,6 +1,6 @@
-import {info} from './gitlab-core'
+import {info} from './gitlab-core.js'
 import {minimatch} from 'minimatch'
-import {TokenLimits} from './limits'
+import {TokenLimits} from './limits.js'
 
 export class Options {
   debug: boolean

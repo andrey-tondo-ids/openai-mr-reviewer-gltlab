@@ -1,123 +1,74 @@
-import {info, setFailed, warning} from './gitlab-core'
-import {
-  ChatGPTAPI,
-  ChatGPTError,
-  ChatMessage,
-  SendMessageOptions
-  // eslint-disable-next-line import/no-unresolved
-} from 'chatgpt'
+
+import {info, setFailed, warning} from './gitlab-core.js'
+import { OpenAI } from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat'
 import pRetry from 'p-retry'
-import {OpenAIOptions, Options} from './options'
+import {OpenAIOptions, Options} from './options.js'
+
 
 // define type to save parentMessageId and conversationId
+// For OpenAI SDK, we don't need parentMessageId/conversationId, but keep for compatibility
 export interface Ids {
   parentMessageId?: string
   conversationId?: string
 }
 
 export class Bot {
-  private readonly api: ChatGPTAPI | null = null // not free
-
+  private readonly api: OpenAI | null = null
   private readonly options: Options
+  private model: string
+  private temperature: number
+  private maxTokens: number
+
 
   constructor(options: Options, openaiOptions: OpenAIOptions) {
     this.options = options
     if (process.env.OPENAI_API_KEY) {
-      const currentDate = new Date().toISOString().split('T')[0]
-      const systemMessage = `${options.systemMessage} 
-Knowledge cutoff: ${openaiOptions.tokenLimits.knowledgeCutOff}
-Current date: ${currentDate}`
-
-      this.api = new ChatGPTAPI({
-        apiBaseUrl: options.apiBaseUrl,
-        systemMessage,
+      this.api = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
-        apiOrg: process.env.OPENAI_API_ORG ?? undefined,
-        debug: options.debug,
-        maxModelTokens: openaiOptions.tokenLimits.maxTokens,
-        maxResponseTokens: openaiOptions.tokenLimits.responseTokens,
-        completionParams: {
-          temperature: options.openaiModelTemperature,
-          model: openaiOptions.model
-        }
+        organization: process.env.OPENAI_API_ORG ?? undefined,
+        baseURL: options.apiBaseUrl
       })
+      this.model = openaiOptions.model
+      this.temperature = options.openaiModelTemperature
+      this.maxTokens = openaiOptions.tokenLimits.responseTokens
     } else {
-      const err =
-        "Unable to initialize the OpenAI API, both 'OPENAI_API_KEY' environment variable are not available"
-      throw new Error(err)
+      throw new Error("Unable to initialize the OpenAI API, 'OPENAI_API_KEY' environment variable is not available")
     }
   }
 
-  chat = async (message: string, ids: Ids): Promise<[string, Ids]> => {
-    let res: [string, Ids] = ['', {}]
-    try {
-      res = await this.chat_(message, ids)
-      return res
-    } catch (e: unknown) {
-      if (e instanceof ChatGPTError) {
-        warning(`Failed to chat: ${e}, backtrace: ${e.stack}`)
-      }
-      return res
-    }
-  }
 
-  private readonly chat_ = async (
-    message: string,
-    ids: Ids
-  ): Promise<[string, Ids]> => {
-    // record timing
-    const start = Date.now()
-    if (!message) {
+  chat = async (message: string, _ids: Ids): Promise<[string, Ids]> => {
+    // _ids is ignored, as OpenAI SDK does not use conversation IDs for completions
+    if (!this.api) {
+      setFailed('The OpenAI API is not initialized')
       return ['', {}]
     }
-
-    let response: ChatMessage | undefined
-
-    if (this.api != null) {
-      const opts: SendMessageOptions = {
-        timeoutMs: this.options.openaiTimeoutMS
-      }
-      if (ids.parentMessageId) {
-        opts.parentMessageId = ids.parentMessageId
-      }
-      try {
-        response = await pRetry(() => this.api!.sendMessage(message, opts), {
-          retries: this.options.openaiRetries
-        })
-      } catch (e: unknown) {
-        if (e instanceof ChatGPTError) {
-          info(
-            `response: ${response}, failed to send message to openai: ${e}, backtrace: ${e.stack}`
-          )
-        }
-      }
+    try {
+      const start = Date.now()
+      const systemMessage = this.options.systemMessage
+      const messages: ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: message }
+      ]
+      const response = await this.api.chat.completions.create({
+        model: this.model,
+        messages,
+        temperature: this.temperature,
+        max_tokens: this.maxTokens,
+        // timeout is not a direct param in openai SDK, so we skip it here
+      })
       const end = Date.now()
-      info(`response: ${JSON.stringify(response)}`)
-      info(
-        `openai sendMessage (including retries) response time: ${
-          end - start
-        } ms`
-      )
-    } else {
-      setFailed('The OpenAI API is not initialized')
+      info(`openai chat.completions.create response time: ${end - start} ms`)
+      const responseText = response.choices?.[0]?.message?.content ?? ''
+      if (this.options.debug) {
+        info(`openai responses: ${responseText}`)
+      }
+      return [responseText, {}]
+    } catch (e: any) {
+      warning(`Failed to chat: ${e}, backtrace: ${e.stack}`)
+      return ['', {}]
     }
-    let responseText = ''
-    if (response != null) {
-      responseText = response.text
-    } else {
-      warning('openai response is null')
-    }
-    // remove the prefix "with " in the response
-    if (responseText.startsWith('with ')) {
-      responseText = responseText.substring(5)
-    }
-    if (this.options.debug) {
-      info(`openai responses: ${responseText}`)
-    }
-    const newIds: Ids = {
-      parentMessageId: response?.id,
-      conversationId: response?.conversationId
-    }
-    return [responseText, newIds]
   }
+
 }
