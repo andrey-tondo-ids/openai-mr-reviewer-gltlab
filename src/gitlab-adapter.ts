@@ -166,9 +166,6 @@ export const octokit = {
         throw error
       }
     },
-        data: res
-      }
-    },
     // use for create file changes comment
     async createReviewComment({
       pull_number,
@@ -189,7 +186,6 @@ export const octokit = {
         {
           commitId: commit_id
         },
-
         {
           position: Object.assign(
             {
@@ -226,15 +222,17 @@ export const octokit = {
       )
       return {data: res}
     },
+
     async createReplyForReviewComment(...args: any[]) {
       console.log('pulls createReplyForReviewComment')
       return {}
     },
+
     async listReviewComments({
       pull_number,
-      page,
-      per_page
-    }: IPageParams & {pull_number: number}) {
+      page = 1,
+      per_page = 100
+    }: {pull_number: number, page?: number, per_page?: number}) {
       const res = await api.MergeRequestDiscussions.all(
         gitlabENV.ci.project.id,
         pull_number,
@@ -267,7 +265,8 @@ export const octokit = {
         data
       }
     },
-    async listCommits({page}: IPageParams & {issue_number: number}) {
+
+    async listCommits({page = 1, issue_number}: {page?: number, issue_number: number}) {
       const res = await api.MergeRequests.allCommits(
         gitlabENV.ci.project.id,
         parseInt(gitlabENV.ci.mergeRequest.iid)
@@ -306,9 +305,9 @@ export const octokit = {
     },
     async listComments({
       issue_number,
-      page,
-      per_page
-    }: IPageParams & {issue_number: number}) {
+      page = 1,
+      per_page = 100
+    }: {issue_number: number, page?: number, per_page?: number}) {
       // this notes will include all notes
       return octokit.pulls.listReviewComments({
         pull_number: issue_number,
