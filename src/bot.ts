@@ -24,14 +24,19 @@ export class Bot {
   constructor(options: Options, openaiOptions: OpenAIOptions) {
     this.options = options
     if (process.env.OPENAI_API_KEY) {
-      this.api = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        organization: process.env.OPENAI_API_ORG ?? undefined,
-        baseURL: options.apiBaseUrl
-      })
-      this.model = openaiOptions.model
-      this.temperature = options.openaiModelTemperature
-      this.maxTokens = openaiOptions.tokenLimits.responseTokens
+      try {
+        this.api = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+          organization: process.env.OPENAI_API_ORG ?? undefined,
+          baseURL: options.apiBaseUrl
+        })
+        this.model = openaiOptions.model
+        this.temperature = options.openaiModelTemperature
+        this.maxTokens = openaiOptions.tokenLimits.responseTokens
+      } catch (e: any) {
+        setFailed(`Failed to initialize OpenAI API (apiBaseUrl: ${options.apiBaseUrl}, model: ${openaiOptions.model}): ${e}, backtrace: ${e.stack}`)
+        throw e
+      }
     } else {
       throw new Error("Unable to initialize the OpenAI API, 'OPENAI_API_KEY' environment variable is not available")
     }
@@ -66,7 +71,7 @@ export class Bot {
       }
       return [responseText, {}]
     } catch (e: any) {
-      warning(`Failed to chat: ${e}, backtrace: ${e.stack}`)
+      warning(`Failed to chat (model: ${this.model}, message: ${message?.slice?.(0, 100)}): ${e}, backtrace: ${e.stack}`)
       return ['', {}]
     }
   }

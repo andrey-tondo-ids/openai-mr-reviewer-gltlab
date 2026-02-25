@@ -5,6 +5,17 @@ import {
   setFailed,
   warning
 } from '@actions/core'
+
+function formatError(module: string, context: Record<string, any>, error: any): string {
+  let contextStr = Object.entries(context)
+    .map(([k, v]) => `${k}: ${typeof v === 'string' ? v.slice(0, 100) : JSON.stringify(v)}`)
+    .join(', ')
+  if (error instanceof Error) {
+    return `[${module}] ${contextStr} | ${error.message}, backtrace: ${error.stack}`
+  } else {
+    return `[${module}] ${contextStr} | ${error}`
+  }
+}
 import {Bot} from './bot.js'
 import {OpenAIOptions, Options} from './options.js'
 import {Prompts} from './prompts.js'
@@ -47,9 +58,7 @@ async function run(): Promise<void> {
       new OpenAIOptions(options.openaiLightModel, options.lightTokenLimits)
     )
   } catch (e: any) {
-    warning(
-      `Skipped: failed to create summary bot, please check your openai_api_key: ${e}, backtrace: ${e.stack}`
-    )
+    warning(formatError('main.ts:summary-bot', {model: options.openaiLightModel}, e))
     return
   }
 
@@ -60,9 +69,7 @@ async function run(): Promise<void> {
       new OpenAIOptions(options.openaiHeavyModel, options.heavyTokenLimits)
     )
   } catch (e: any) {
-    warning(
-      `Skipped: failed to create review bot, please check your openai_api_key: ${e}, backtrace: ${e.stack}`
-    )
+    warning(formatError('main.ts:review-bot', {model: options.openaiHeavyModel}, e))
     return
   }
 
@@ -81,20 +88,17 @@ async function run(): Promise<void> {
       warning('Skipped: this action only works on push events or pull_request')
     }
   } catch (e: any) {
-    if (e instanceof Error) {
-      setFailed(`Failed to run: ${e.message}, backtrace: ${e.stack}`)
-    } else {
-      setFailed(`Failed to run: ${e}, backtrace: ${e.stack}`)
-    }
+    setFailed(formatError('main.ts:run', {event: process.env.GITHUB_EVENT_NAME}, e))
   }
 }
 
+
 process
   .on('unhandledRejection', (reason, p) => {
-    warning(`Unhandled Rejection at Promise: ${reason}, promise is ${p}`)
+    warning(formatError('main.ts:unhandledRejection', {promise: p}, reason))
   })
   .on('uncaughtException', (e: any) => {
-    warning(`Uncaught Exception thrown: ${e}, backtrace: ${e.stack}`)
+    warning(formatError('main.ts:uncaughtException', {}, e))
   })
 
 await run()

@@ -72,72 +72,100 @@ interface ICreateReviewComment extends IBaseParams {
 export const octokit = {
   repos: {
     async compareCommits({base, head}: ICompare & IBaseParams) {
-      const res = await api.Repositories.compare(
-        gitlabENV.ci.project.id,
-        base,
-        head
-      )
-      return {
-        data: {
-          files: res.diffs?.map(e => ({
-            ...e,
-            filename: e.new_path,
-            patch: e.diff
-          })),
-          commits: res.commits?.map(e => ({
-            ...e,
-            sha: e.id
-          }))
+      try {
+        const res = await api.Repositories.compare(
+          gitlabENV.ci.project.id,
+          base,
+          head
+        )
+        return {
+          data: {
+            files: res.diffs?.map(e => ({
+              ...e,
+              filename: e.new_path,
+              patch: e.diff
+            })),
+            commits: res.commits?.map(e => ({
+              ...e,
+              sha: e.id
+            }))
+          }
         }
+      } catch (error) {
+        console.error('[octokit.repos.compareCommits] Error:', {base, head, error})
+        throw error
       }
     },
     async getContent({path, ref}: IBaseParams & IContent) {
-      const res = await api.RepositoryFiles.show(
-        gitlabENV.ci.project.id,
-        path,
-        ref
-      )
-      return {
-        data: {...res, type: 'file'}
+      try {
+        const res = await api.RepositoryFiles.show(
+          gitlabENV.ci.project.id,
+          path,
+          ref
+        )
+        return {
+          data: {...res, type: 'file'}
+        }
+      } catch (error) {
+        console.error('[octokit.repos.getContent] Error:', {path, ref, error})
+        throw error
       }
     }
   },
   pulls: {
     async get({pull_number}: IBaseParams & {pull_number: number}) {
-      const res = await api.MergeRequests.show(
-        gitlabENV.ci.project.id,
-        pull_number
-      )
-      return {
-        data: {
-          ...res,
-          body: res.description
+      try {
+        const res = await api.MergeRequests.show(
+          gitlabENV.ci.project.id,
+          pull_number
+        )
+        return {
+          data: {
+            ...res,
+            body: res.description
+          }
         }
+      } catch (error) {
+        console.error('[octokit.pulls.get] Error:', {pull_number, error})
+        throw error
       }
     },
     async update({
       pull_number,
       body
     }: IBaseParams & {pull_number: number; body: string}) {
-      console.log('update desc:', body)
-      const res = await api.MergeRequests.edit(
-        gitlabENV.ci.project.id,
-        pull_number,
-        {description: body}
-      )
-      return {
-        data: res
+      try {
+        console.log('update desc:', body)
+        const res = await api.MergeRequests.edit(
+          gitlabENV.ci.project.id,
+          pull_number,
+          {description: body}
+        )
+        return {
+          data: res
+        }
+      } catch (error) {
+        console.error('[octokit.pulls.update] Error:', {pull_number, body, error})
+        throw error
       }
     },
     async updateReviewComment({comment_id, body}: IUpdateComment) {
-      console.log('update ReviewComment:', body)
-      const res = await api.MergeRequestNotes.edit(
-        gitlabENV.ci.project.id,
-        context.payload.pull_request.number,
-        comment_id,
-        {body}
-      )
-      return {
+      try {
+        console.log('update ReviewComment:', body)
+        const res = await api.MergeRequestNotes.edit(
+          gitlabENV.ci.project.id,
+          context.payload.pull_request.number,
+          comment_id,
+          {body}
+        )
+        return {
+          data: res
+        }
+      } catch (error) {
+        console.error('[octokit.pulls.updateReviewComment] Error:', {comment_id, body, error})
+        throw error
+      }
+    },
         data: res
       }
     },

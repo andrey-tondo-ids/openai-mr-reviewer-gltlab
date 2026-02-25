@@ -492,7 +492,7 @@ ${chain}
         body
       })
     } catch (e) {
-      warning(`Failed to create comment: ${e}`)
+      warning(`Failed to create comment (target: ${target}, body: ${body?.slice?.(0, 100)}): ${e}`)
     }
   }
 
@@ -511,7 +511,7 @@ ${chain}
         await this.create(body, target)
       }
     } catch (e) {
-      warning(`Failed to replace comment: ${e}`)
+      warning(`Failed to replace comment (target: ${target}, tag: ${tag}, body: ${body?.slice?.(0, 100)}): ${e}`)
     }
   }
 
@@ -523,10 +523,9 @@ ${chain}
           return cmt
         }
       }
-
       return null
     } catch (e: unknown) {
-      warning(`Failed to find comment with tag: ${e}`)
+      warning(`Failed to find comment with tag (target: ${target}, tag: ${tag}): ${e}`)
       return null
     }
   }
